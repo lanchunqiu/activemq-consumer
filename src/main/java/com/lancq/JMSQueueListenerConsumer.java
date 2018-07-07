@@ -6,10 +6,10 @@ import javax.jms.*;
 
 /**
  * @Author lancq
- * @Description 阻塞式消息接收
+ * @Description 监听式消息接收
  * @Date 2018/7/6
  **/
-public class JMSQueueConsumer {
+public class JMSQueueListenerConsumer {
 
     public static void main(String[] args) {
         //连接工厂
@@ -21,25 +21,28 @@ public class JMSQueueConsumer {
             //开启连接
             connection.start();
             //创建会话
-            Session session = connection.createSession(Boolean.FALSE, Session.CLIENT_ACKNOWLEDGE);//Session.CLIENT_ACKNOWLEDGE只能在消费端
+            Session session = connection.createSession(Boolean.TRUE, Session.AUTO_ACKNOWLEDGE);
             //创建目的地
             Destination destination = session.createQueue("MyQueue");
             //创建消费者
             MessageConsumer consumer = session.createConsumer(destination);
-            for(int i=0; i<10; i++){
-                //接收消息
-                TextMessage message = (TextMessage) consumer.receive();
-                System.out.println("message = [" + message.getText() + "]");
-                if(i==4){
-                    message.acknowledge();//只确认前5个消息，后面5个消息不确认
-                }
 
+            //接收消息
+            MessageListener messageListener = new MessageListener() {
+                @Override
+                public void onMessage(Message message) {
+                    try {
+                        System.out.println("message = [" + ((TextMessage)message).getText() + "]");
+                    } catch (JMSException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            while(true){
+                consumer.setMessageListener(messageListener);
+                session.commit();
             }
 
-
-            //session.commit();//确认消息
-
-            session.close();
         } catch (JMSException e) {
             e.printStackTrace();
         } finally {
